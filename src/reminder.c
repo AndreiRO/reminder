@@ -15,7 +15,7 @@ static sqlite3* db = NULL;
 bool initializeConnection() {
     int rc;
   
-    rc = sqlite3_open("tasks.db", &db);
+    rc = sqlite3_open("../tasks.db", &db);
 
     if(rc){
         fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
