@@ -98,7 +98,6 @@ value l_pop(list l) {
 
 iterator l_iterator(list l) {
     if(l) {
-        test(l->size > 0, "Size issues");
         return l->start; 
     }
 

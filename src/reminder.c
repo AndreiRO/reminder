@@ -243,6 +243,8 @@ void printTask(Task t) {
 }
 
 list getByDate(struct tm t, struct error* err, const char* sql) {
+    err->error = NO_ERROR;
+
     int seconds = t.tm_sec;
     int minutes = t.tm_min;
     int day     = t.tm_wday;
@@ -329,30 +331,29 @@ list getByDate(struct tm t, struct error* err, const char* sql) {
     err->error = NO_ERROR;
     sqlite3_stmt* statement;
     const char* unused;
-    //const char* sql = "select * from tasks where start_date like '?' ";    
     
     if(seconds < 0 || seconds > 60) {
         strcpy(seconds_str,"%");
     } else {
-        sprintf(seconds_str, "%i", seconds);
+        sprintf(seconds_str, "%d", seconds);
     }
     
     if(minutes < 0 || minutes > 59) {
         strcpy(minutes_str, "%");
     } else {
-        sprintf(minutes_str, "%i", minutes);
+        sprintf(minutes_str, "%d", minutes);
     }
 
     if(hours < 0 || hours > 23) {
         strcpy(hours_str, "%");    
     } else {
-        sprintf(hours_str, "%i", hours);
+        sprintf(hours_str, "%d", hours);
     }
     
     if(year < 1900) {
         strcpy(year_str, "%");
     } else {
-        sprintf(year_str, "%i", year);
+        sprintf(year_str, "%d", year);
     }
 
     int rc = sqlite3_prepare(db, sql, -1, &statement, &unused);
@@ -424,7 +425,6 @@ list getByDate(struct tm t, struct error* err, const char* sql) {
 }
 
 list getByStartDate(struct tm t, struct error* e) {
-    //const char* sql = "select * from tasks where start_date like '?' ";
     return getByDate(t, e, "select * from tasks where start_date like ?");
 }
 

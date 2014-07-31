@@ -38,11 +38,11 @@ void alarm(struct error* err) {
     }
 
     list tasks_ending_today     = getByEndDate(*current_time, &e);
-    if(e.error != NO_ERROR) {
+    /*if(e.error != NO_ERROR) {
         fprintf(stderr, "Error while retrieving tasks: %s\n", e.description);
         return ;
     }
-   
+   */
     iterator i = l_iterator(tasks_ending_today);
     printf("\n");
     printf("Tasks ending today: %d\n", l_size(tasks_ending_today));
