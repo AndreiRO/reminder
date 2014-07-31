@@ -61,9 +61,6 @@ void serialize(Task task, FILE* f, struct error* err);
 Task deserialize(FILE* f, struct error* err);
 
 
-void alarm(Task task, struct error* err);
-void loop(void* (*callback)(void* data, struct error* err));
-
 void printTask(Task t);
 
 void destructTask(Task t);

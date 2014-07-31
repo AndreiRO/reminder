@@ -224,13 +224,6 @@ Task getTask(char* title, struct error* err) {
     return t;
 }
 
-void alarm(Task task, struct error* err) {
-
-}
-
-void loop(void* (*callback) (void* data, struct error* err)) {
-
-}
 
 void destructTask(Task t) {
     free(t->title);
@@ -470,4 +463,3 @@ Task deserialize(FILE* f, struct error* e) {
 
     fread(t, sizeof(struct task), 1, f);
     return t;
-}
