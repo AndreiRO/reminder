@@ -59,12 +59,13 @@ bool l_empty(list l) {
 }
 
 void l_push(list l, value v) {
-    if(l) {
+     if(l) {
         
         if(!l->start && l->size == 0) {
-            l->start    = (node)malloc(sizeof(struct n));
-            l->start->v = v;
-            l->size     = 1;
+            l->start        = (node)malloc(sizeof(struct n));
+            l->start->v     = v;
+            l->size         = 1;
+            l->start->next  = NULL;
         } else if(l->start && l->size > 0) {
             node n  = (node)malloc(sizeof(struct n));
             n->v    = v;

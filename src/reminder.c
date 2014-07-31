@@ -233,6 +233,7 @@ void destructTask(Task t) {
 }
 
 void printTask(Task t) {
+    if(!t) return;
     printf("\n>---------------------TASK-------------------------------\n");
     printf("Title: %s\n", t->title);
     printf("Description: %s\n", t->description);
@@ -240,6 +241,37 @@ void printTask(Task t) {
     printf("End date: %s", asctime(&(t->dueDay)));
     printf("Repeat: %s\n", get_repeat_pattern(t->repeatPattern));
     printf("---------------------------------------------------------\n\n");
+}
+
+static void populateList(list l, sqlite3_stmt* statement) {
+    char* title;
+    char* description;
+    struct tm start;
+    struct tm end;
+    enum repeat_pattern* pattern;
+
+    int title_length = strlen((char*)sqlite3_column_text(statement, 0)) + 1;
+    int descr_length = strlen((char*)sqlite3_column_text(statement, 1)) + 1;
+
+    title       = (char*)malloc(title_length*sizeof(char));
+    description = (char*)malloc(descr_length*sizeof(char));
+
+    strptime((char*)sqlite3_column_text(statement, 2), "%a %b %d %H:%M:%S %Y%n", &start);
+    strptime((char*)sqlite3_column_text(statement, 3), "%a %b %d %H:%M:%S %Y%n", &end);
+
+    pattern = get_pattern((char*)sqlite3_column_text(statement, 4));
+    strcpy(title,(char*)sqlite3_column_text(statement, 0));
+    strcpy(description, (char*)sqlite3_column_text(statement, 1));
+
+    Task t          = (Task)malloc(sizeof(struct task));
+    t->title        = title;
+    t->description  = description;
+    t->startDay     = start;
+    t->dueDay       = end;
+    t->repeatPattern= pattern;
+
+    l_push(l, t);
+
 }
 
 list getByDate(struct tm t, struct error* err, const char* sql) {
@@ -251,7 +283,8 @@ list getByDate(struct tm t, struct error* err, const char* sql) {
     int hours   = t.tm_hour;
     int month   = t.tm_mon;
     int year    = t.tm_year;
-
+    year        += 1900;
+    
     char* month_str;
     char* day_str;
 
@@ -328,7 +361,7 @@ list getByDate(struct tm t, struct error* err, const char* sql) {
     char minutes_str[3];
     char hours_str[3];   
     char year_str[5];
-    err->error = NO_ERROR;
+    
     sqlite3_stmt* statement;
     const char* unused;
     
@@ -349,7 +382,7 @@ list getByDate(struct tm t, struct error* err, const char* sql) {
     } else {
         sprintf(hours_str, "%d", hours);
     }
-    
+   
     if(year < 1900) {
         strcpy(year_str, "%");
     } else {
@@ -365,10 +398,10 @@ list getByDate(struct tm t, struct error* err, const char* sql) {
 
     int total_length = strlen(day_str) + 1 /*space*/ + 
         strlen(month_str)+ 1 /*space*/ + 8 /*hh:mm:ss*/+ 1/*space*/ + 4 /*year*/
-        +1 /*\0*/;
+        + 1 /*\0*/;
     char* value = (char*)malloc(total_length * sizeof(char));
 
-    strcat(value, day_str);
+    strcpy(value, day_str);
     strcat(value, " ");
     strcat(value, month_str);
     strcat(value, " ");
@@ -390,39 +423,18 @@ list getByDate(struct tm t, struct error* err, const char* sql) {
         return NULL;
     }
     
+    populateList(l, statement);
+
     while(sqlite3_step(statement) == SQLITE_ROW) {
-        char* title;
-        char* description;
-        struct tm start;
-        struct tm end;
-        enum repeat_pattern* pattern;
-
-        int title_length = strlen((char*)sqlite3_column_text(statement, 0)) + 1;
-        int descr_length = strlen((char*)sqlite3_column_text(statement, 1)) + 1;
-
-        title       = (char*)malloc(title_length*sizeof(char));
-        description = (char*)malloc(descr_length*sizeof(char));
-
-        strptime((char*)sqlite3_column_text(statement, 2), "%a %b %d %H:%M:%S %Y%n", &start);
-        strptime((char*)sqlite3_column_text(statement, 3), "%a %b %d %H:%M:%S %Y%n", &end);
-
-        pattern = get_pattern((char*)sqlite3_column_text(statement, 4));
-        strcpy(title,(char*)sqlite3_column_text(statement, 0));
-        strcpy(description, (char*)sqlite3_column_text(statement, 1));
-
-        Task t          = (Task)malloc(sizeof(struct task));
-        t->title        = title;
-        t->description  = description;
-        t->startDay     = start;
-        t->dueDay       = end;
-        t->repeatPattern= pattern;
-
-        l_push(l, t);
+        populateList(l, statement);
     }
 
     free(value);
     return l;
 }
+
+
+
 
 list getByStartDate(struct tm t, struct error* e) {
     return getByDate(t, e, "select * from tasks where start_date like ?");
