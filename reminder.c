@@ -463,3 +463,4 @@ Task deserialize(FILE* f, struct error* e) {
 
     fread(t, sizeof(struct task), 1, f);
     return t;
+}

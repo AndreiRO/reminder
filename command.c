@@ -1,9 +1,19 @@
 #include<time.h>
+#include<malloc.h>
 #include<stdio.h>
 #include"list.h"
 #include"reminder.h"
 #include"command.h"
 
+static void task_destructor(void* t) {
+    Task task = (Task)t;
+    free(task->title);
+    free(task->description);
+    free(task->repeatPattern);
+    free(task);
+    task = NULL;
+    t = NULL;
+}
 
 void alarm(struct error* err) {
     /*
@@ -35,17 +45,35 @@ void alarm(struct error* err) {
    
     iterator i = l_iterator(tasks_ending_today);
     printf("\n");
-    
-    
+    printf("Tasks ending today: %d\n", l_size(tasks_ending_today));
 
- 
+    while(!l_iterator_at_end(i)) {
+        Task t = (Task)l_value(i);
+        printTask(t);
+    }
 
+    i = l_iterator(tasks_starting_today);
+    printf("\n\nTasks starting today: %d\n", l_size(tasks_starting_today));
+    while(!l_iterator_at_end(i)) {
+        Task t = (Task)l_value(i);
+        printTask(t);
+    }
+    
+    l_delete(tasks_starting_today, task_destructor);
+    l_delete(tasks_ending_today, task_destructor);
 }
 
 void loop(void* (*callback)(void* , struct error*), void(*err_callback(struct error*))) {
 
 }
 
+void initializeCommands() {
+     
+    commands[0] = (struct command) {.title="CREATE_TASK", .shortOption='c', .longOption="create"};
+    commands[1] = (struct command) {.title="EDIT_TASK", .shortOption='e', .longOption="edit"};
+    commands[2] = (struct command) {.title="DELETE_TASK", .shortOption='d', .longOption="delete"};
+    commands[3] = (struct command) {.title="LIST_ALL_TASKS", .shortOption='l', .longOption="list"};
+    commands[4] = (struct command) {.title="LIST_ALL_TASKS_BY_DATE", .shortOption='L', .longOption="listd"};
+    commands[5] = (struct command) {.title="CHECK_TASKS_FOR_TODAY", .shortOption='t', .longOption="today"};
 
-
-
+}
