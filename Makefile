@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -g
 IGNORE = -Wno-pointer-sign 
-SOURCES = command.c reminder.c main.c list.c
+SOURCES = src/reminder.c src/main.c src/list.c src/command.c src/str.c
 LIBS = -lsqlite3
 OBJS = $(SOURCES: .c=.o)
 test: $(OBJS)

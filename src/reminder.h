@@ -6,21 +6,6 @@
 #include<time.h>
 #include"list.h"
 
-enum repeat_pattern {
-    MONDAY,
-    TUESDAY,
-    WEDNESDAY,
-    THURSDAY,
-    FRIDAY,
-    SATURDAY,
-    SUNDAY,
-    DAILY,
-    WEEKLY,
-    MONTHYL,
-    YEARLY,
-    DATE
-};
-
 enum error_code {
     NO_ERROR,
     DATABASE_CONNECTION,
@@ -30,7 +15,8 @@ enum error_code {
     DATABASE_SELECT,
     DATABASE_OTHER,
     FILE_ERROR,
-    PARAMETER_ERROR
+    PARAMETER_ERROR,
+    ARGUEMENTS_ERROR
 };
 
 struct error {
@@ -44,7 +30,6 @@ struct task {
     char* description;
     struct tm startDay;
     struct tm dueDay;
-    enum repeat_pattern* repeatPattern;
 };
 
 typedef struct task* Task;
@@ -52,7 +37,7 @@ typedef struct task* Task;
 void close_db();
 /* constructor destructor */
 void createTask(char* title, char* description, struct tm, struct tm,
-                    enum repeat_pattern* pattern, struct error* err);
+                    struct error* err);
 void deleteTask(char* name, struct error* err);
 void editTask(char* title, Task newValue, struct error* err);
 Task getTask(char* title, struct error* err);

@@ -13,17 +13,19 @@
  *   
  *
  * */
+
 struct command {
     char title[25];
     char shortOption;
     char longOption[10];  
 };
 
-struct command commands[6];
+extern struct command commands[6];
 
-void initializeCommands();
 void alarm(struct error* err);
 void loop(void* (*callback)(void* , struct error*), void(*err_callback(struct error*)));
+void clear_old_tasks(struct error* err, sqlite3* db);
+void parse_command(char** argv, int argc, struct command* commands ,struct error* err);
 
 
 

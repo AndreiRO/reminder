@@ -5,6 +5,7 @@
 #include<time.h>
 #include<stdio.h>
 #include<string.h>
+
 #include<stdlib.h>
 #include"reminder.h"
 #include"list.h"
@@ -14,8 +15,8 @@ static sqlite3* db = NULL;
 
 bool initializeConnection() {
     int rc;
-  
-    rc = sqlite3_open("../tasks.db", &db);
+    
+    rc = sqlite3_open("tasks.db", &db);
 
     if(rc){
         fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
@@ -31,19 +32,9 @@ void close_db() {
     }
 }
 
-char* get_repeat_pattern(enum repeat_pattern* pattern) {
-
-    return "Dummy";
-}
-
-enum repeat_pattern* get_pattern(const char* p) {
-    enum repeat_pattern* dummy = (enum repeat_pattern*)malloc(sizeof(enum repeat_pattern));
-    *dummy = MONDAY;
-    return dummy;
-}
-
+    
 void createTask(char* title, char* description, struct tm startDate, struct tm endDate,
-                    enum repeat_pattern* pattern, struct error* err) {
+                    struct error* err) {
     
     err->error = NO_ERROR;    
     /*
@@ -56,7 +47,7 @@ void createTask(char* title, char* description, struct tm startDate, struct tm e
             exit(1);
         }
     }
-    if(!title || !description || !pattern) {
+    if(!title || !description) {
         err->error = DATABASE_INSERT;
         err->description= sqlite3_errmsg(db);
         return ;
@@ -64,7 +55,7 @@ void createTask(char* title, char* description, struct tm startDate, struct tm e
 
     const char* unused;
     sqlite3_stmt* statement;
-    char* sql = "INSERT INTO TASKS(TITLE, DESCRIPTION, START_DATE, END_DATE, REPEAT_PATTERN) VALUES(?,?,?,?,?)";
+    char* sql = "INSERT INTO TASKS(TITLE, DESCRIPTION, START_DATE, END_DATE) VALUES(?,?,?,?)";
 
     int rc = sqlite3_prepare(db, sql, -1, &statement, &unused);
 
@@ -80,8 +71,6 @@ void createTask(char* title, char* description, struct tm startDate, struct tm e
     sqlite3_bind_text(statement, 3, st_date_str, strlen(st_date_str)-1, SQLITE_STATIC);
     char* en_date_str = asctime(&endDate);
     sqlite3_bind_text(statement, 4, en_date_str, strlen(en_date_str)-1, SQLITE_STATIC);
-    char* rp_pattern_str = get_repeat_pattern(pattern);
-    sqlite3_bind_text(statement, 5, rp_pattern_str, strlen(rp_pattern_str), SQLITE_STATIC);
     
     sqlite3_step(statement);
     rc = sqlite3_finalize(statement);
@@ -134,7 +123,7 @@ void editTask(char* title, Task newValue, struct error* err) {
     sqlite3_stmt* statement;
     const char* unused;
     char* sql = "update tasks set title = ?, description = ?, start_date = ?, end_date = ?,\
-                repeat_pattern = ? where title = ? ";
+                where title = ? ";
     int rc = sqlite3_prepare(db, sql, -1, &statement, &unused);
     if(rc != SQLITE_OK) {
         err->error          = DATABASE_UPDATE;
@@ -148,8 +137,6 @@ void editTask(char* title, Task newValue, struct error* err) {
     sqlite3_bind_text(statement, 3, startDay_str, strlen(startDay_str)-1, SQLITE_STATIC);
     char* dueDay_str    = asctime(&newValue->dueDay);
     sqlite3_bind_text(statement, 4, dueDay_str, strlen(dueDay_str)-1, SQLITE_STATIC);
-    char* pattern = get_repeat_pattern(newValue->repeatPattern);
-    sqlite3_bind_text(statement, 5, pattern, strlen(pattern), SQLITE_STATIC);
     sqlite3_bind_text(statement, 6, title, strlen(title), SQLITE_STATIC);
 
     sqlite3_step(statement);
@@ -203,8 +190,6 @@ Task getTask(char* title, struct error* err) {
     char* task_end = (char*)malloc(sizeof(char) * (strlen((char*)sqlite3_column_text(statement, 3))+1));
     strcpy(task_end, (char*)sqlite3_column_text(statement, 3));    
 
-    char* task_repeat = (char*)malloc(sizeof(char) * (strlen((char*)sqlite3_column_text(statement, 4))+1));
-    strcpy(task_repeat, (char*)sqlite3_column_text(statement, 4));    
      
     Task t = (Task)malloc(sizeof(struct task));
     t->title        = task_title;
@@ -213,11 +198,8 @@ Task getTask(char* title, struct error* err) {
     strptime(task_start, "%a %b %d %H:%M:%S %Y%n", &(t->startDay));
     strptime(task_end, "%a %b %d %H:%M:%S %Y%n", &(t->dueDay));
    
-    t->repeatPattern= get_pattern(task_repeat);
-
     free(task_start);
     free(task_end);
-    free(task_repeat);
  
     sqlite3_finalize(statement);
 
@@ -228,7 +210,6 @@ Task getTask(char* title, struct error* err) {
 void destructTask(Task t) {
     free(t->title);
     free(t->description);
-    free(t->repeatPattern);
     free(t);
 }
 
@@ -239,7 +220,6 @@ void printTask(Task t) {
     printf("Description: %s\n", t->description);
     printf("Start date: %s", asctime(&(t->startDay)));
     printf("End date: %s", asctime(&(t->dueDay)));
-    printf("Repeat: %s\n", get_repeat_pattern(t->repeatPattern));
     printf("---------------------------------------------------------\n\n");
 }
 
@@ -248,7 +228,6 @@ static void populateList(list l, sqlite3_stmt* statement) {
     char* description;
     struct tm start;
     struct tm end;
-    enum repeat_pattern* pattern;
 
     int title_length = strlen((char*)sqlite3_column_text(statement, 0)) + 1;
     int descr_length = strlen((char*)sqlite3_column_text(statement, 1)) + 1;
@@ -259,7 +238,6 @@ static void populateList(list l, sqlite3_stmt* statement) {
     strptime((char*)sqlite3_column_text(statement, 2), "%a %b %d %H:%M:%S %Y%n", &start);
     strptime((char*)sqlite3_column_text(statement, 3), "%a %b %d %H:%M:%S %Y%n", &end);
 
-    pattern = get_pattern((char*)sqlite3_column_text(statement, 4));
     strcpy(title,(char*)sqlite3_column_text(statement, 0));
     strcpy(description, (char*)sqlite3_column_text(statement, 1));
 
@@ -268,7 +246,6 @@ static void populateList(list l, sqlite3_stmt* statement) {
     t->description  = description;
     t->startDay     = start;
     t->dueDay       = end;
-    t->repeatPattern= pattern;
 
     l_push(l, t);
 
