@@ -5,14 +5,18 @@
 #define DEFAULT_SIZE 8*2
 
 
-struct string {
-    size_t max_size;
-    size_t curr_size;
-    char* str;
-};
-
 static void string_realloc(struct string* s, size_t new_size) {
+    
+    if(new_size < strlen(s->str)) {
+        return ;
+    }
 
+    char* new_str = (char*)malloc(sizeof(char) * new_size * 2);
+    strcpy(new_str, s->str);
+    free(s->str);
+    s->str        = new_str;
+    s->curr_size  = new_size;
+    s->max_size   = new_size * 2;
 }
 
 struct string  string_new() {
@@ -69,13 +73,13 @@ void string_append(struct string* s, char* c) {
 
 void string_append2(struct string* s1, struct string s2) {
     if(s1->max_size - s1->curr_size < s2.curr_size - 1) {
-        string_realloc(s1, 2* s2.curr_size);
+        string_realloc(s1, 2* s2.curr_size+1);
     }
 
     strcpy(s1->str, s2.str);
 }
 
-struct string mix(char* s1, char* s2) {
+struct string string_concat(char* s1, char* s2) {
     if(!s1)
         s1 = "";
     if(!s2)
@@ -84,7 +88,30 @@ struct string mix(char* s1, char* s2) {
     size_t sz1 = strlen(s1), sz2 = strlen(s2);
     size_t sz = sz1 + sz2 + 1 /*'\0'*/;
     struct string s = string_new();
+    free(s.str);
+    s.str = (char*)malloc(sz*sizeof(char));
+    strcpy(s.str, s1);
+    strcat(s.str, s2);
 
+    return s;
 }
 
+char*   string_char(struct string s) {
+    return s.str;
+}
 
+void    string_debug(struct string s) {
+    printf("\n-------------------------------------\n");
+    printf("String: %s \nSize: %ld\nMax size: %ld", s.str, s.curr_size, s.max_size);
+    printf("\n-------------------------------------\n");
+}
+
+struct string string_mix(char* s1, char* s2) {
+    size_t  l1 = strlen(s1),
+            l2 = strlen(s2) + 1 ;
+    struct string s = string_new3(l1+l2);
+    string_append(&s, s1);
+    string_append(&s, s2);
+    
+    return s;
+}

@@ -82,21 +82,7 @@ void loop(void* (*callback)(void* , struct error*), void(*err_callback(struct er
 
 }
 
-size_t get_buffer_size(FILE* f) {
-    if(!f) {
-        return 0;
-    }
 
-    char buffer[16];
-    size_t sz = 0;
-    
-    while(fgets(buffer, 16, f)) {
-        sz += strlen(buffer);
-    }
-    ++ sz;
-
-    return sz;
-}
 
 bool starts_with(char* source, char* pattern) {
     int i = 0;
@@ -112,6 +98,10 @@ bool starts_with(char* source, char* pattern) {
     }
 
     return true;
+}
+
+static char* get_string(FILE* f) {
+
 }
 
 void parse_command(char** argv, int argc, struct command* commands, struct error* err) {
