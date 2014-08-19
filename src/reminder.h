@@ -52,6 +52,8 @@ void destructTask(Task t);
 
 list getByStartDate(struct tm t, struct error* err);
 list getByEndDate(struct tm t, struct error* err);
+list getTasks(struct error* err);
+list getBetweenDate(struct tm start, struct tm end, struct error* err);
 
 #endif // _REMINDER_H is defined
 

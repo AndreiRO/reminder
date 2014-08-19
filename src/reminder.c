@@ -248,7 +248,6 @@ static void populateList(list l, sqlite3_stmt* statement) {
     t->dueDay       = end;
 
     l_push(l, t);
-
 }
 
 list getByDate(struct tm t, struct error* err, const char* sql) {
@@ -410,7 +409,33 @@ list getByDate(struct tm t, struct error* err, const char* sql) {
     return l;
 }
 
+list getTasks(struct error* err) {
+    err->error = NO_ERROR;
 
+    if(!db) {
+        if(!initializeConnection()) {
+            exit(1);
+        }
+    }
+
+    sqlite3_stmt* statement;
+    const char* sql = "select * from tasks";
+    const char* unused;
+    
+    int rc = sqlite3_prepare(db, sql, -1, &statement, &unused);
+    if(rc != SQLITE_OK) {
+        err->error = DATABASE_SELECT;
+        err->description = sqlite3_errmsg(db);
+        return NULL;
+    }
+
+    list l = l_new();
+    while(sqlite3_step(statement) == SQLITE_ROW) {
+        populateList(l, statement);
+    } 
+    sqlite3_finalize(statement);
+    return l;
+}
 
 
 list getByStartDate(struct tm t, struct error* e) {
@@ -453,3 +478,103 @@ Task deserialize(FILE* f, struct error* e) {
     fread(t, sizeof(struct task), 1, f);
     return t;
 }
+
+static int date_compare(struct tm t1, struct tm t2) {
+    if(t1.tm_year > t2.tm_year) {
+        return 1;
+    } else if(t1.tm_year < t2.tm_year) {
+        return -1;
+    } else {
+        if(t1.tm_mon > t2.tm_mon) {
+            return 2;
+        } else if(t1.tm_mon < t2.tm_mon) {
+            return -2;
+        } else {
+            if(t1.tm_yday > t2.tm_yday) {
+                return 3;
+            } else if(t1.tm_yday < t2.tm_yday) {
+                return -3;
+            } else {
+                if(t1.tm_hour > t2.tm_hour) {
+                    return 4;
+                } else if(t1.tm_hour < t2.tm_hour) {
+                    return -4;
+                } else {
+                    if(t1.tm_min > t2.tm_min) {
+                        return 5;
+                    } else if(t1.tm_min < t2.tm_min) {
+                        return -5;
+                    } else {
+                        if(t1.tm_sec > t2.tm_sec) {
+                            return 6;
+                        } else if(t1.tm_sec < t2.tm_sec) {
+                            return -6;
+                        } else {
+                            return 0;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+list getBetweenDate(struct tm start, struct tm end, struct error* err) {
+    err->error = NO_ERROR;
+
+    if(!db) {
+        if(!initializeConnection()) {
+            exit(1);
+        }
+    }
+
+    sqlite3_stmt* statement;
+    const char* sql = "select * from tasks";
+    const char* unused;
+
+    
+    int rc = sqlite3_prepare(db, sql, -1, &statement, &unused);
+    if(rc != SQLITE_OK) {
+        err->error = DATABASE_SELECT;
+        err->description = sqlite3_errmsg(db);
+        return NULL;
+    }
+
+    list l = l_new();
+    while(sqlite3_step(statement) == SQLITE_ROW) {
+        struct tm s;
+        struct tm e;
+
+        
+        strptime((char*)sqlite3_column_text(statement, 2), "%a %b %d %H:%M:%S %Y%n", &s);
+        strptime((char*)sqlite3_column_text(statement, 3), "%a %b %d %H:%M:%S %Y%n", &e);
+
+        if(date_compare(start, s) > 0 || date_compare(end, e) < 0) {
+            continue ;
+        }
+
+        char* title;
+        char* description;
+        
+        int title_length = strlen((char*)sqlite3_column_text(statement, 0)) + 1;
+        int descr_length = strlen((char*)sqlite3_column_text(statement, 1)) + 1;
+
+        title       = (char*)malloc(title_length*sizeof(char));
+        description = (char*)malloc(descr_length*sizeof(char));
+
+        strcpy(title,(char*)sqlite3_column_text(statement, 0));
+        strcpy(description, (char*)sqlite3_column_text(statement, 1));
+    
+        Task t          = (Task)malloc(sizeof(struct task));
+        t->title        = title;
+        t->description  = description;
+        t->startDay     = s;
+        t->dueDay       = e;
+        l_push(l, t);
+    } 
+
+    sqlite3_finalize(statement);
+    return l;
+
+}
+

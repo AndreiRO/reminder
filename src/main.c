@@ -5,6 +5,8 @@
 #include"command.h"
 
 int main(int argc, char** argv) {
+    struct error err;
+    parse_command(argv, argc, &err);
  
     return 0;
 }

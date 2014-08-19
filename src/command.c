@@ -1,8 +1,11 @@
+#define _XOPEN_SOURCE
 #include<time.h>
 #include<malloc.h>
 #include<string.h>
 #include<stdio.h>
+#include<stdlib.h>
 #include<math.h>
+#include"str.h"
 #include"list.h"
 #include"reminder.h"
 #include"command.h"
@@ -101,75 +104,200 @@ bool starts_with(char* source, char* pattern) {
 }
 
 static char* get_string(FILE* f) {
+    if(!f) {
+        return NULL;
+    }
 
+    struct string s = string_new();
+    char buffer[1024];
+    
+    while(fgets(buffer, 1024, f)) {
+        string_append(&s, buffer);    
+    }
+
+    return string_char(s);
+    
 }
 
-void parse_command(char** argv, int argc, struct command* commands, struct error* err) {
+static struct tm get_date(FILE* in) {
+    struct tm time_;
+    if(!in) {
+        return time_;
+    }
+
+    printf("\nEnter date(HH:MM:SS DD:MM:YYYY) or enter for current date: ");
+    struct string s = string_new();
+    char buffer[512];
+
+    while(fgets(buffer, 512, in)) {
+        string_append(&s, buffer);
+    }
+
+    if(strcmp(string_char(s), "\n") == 0) {
+        time_t t;
+        time(&t);
+        time_ = *(struct tm*)localtime(&t);
+    } else {
+        strptime(string_char(s), "%H:%M:%S %d:%m:%Y",&time_);
+    }
+
+    return time_;
+}
+
+static void handle_error(struct error* err) {
+    if(err->error != NO_ERROR) {
+        fprintf(stderr, "\nError:%d : %s\n", err->error, err->description);
+        exit(err->error);
+    }
+}
+
+void parse_command(char** argv, int argc, struct error* err) {
     err->error = NO_ERROR;
 
     if(argc <2) {
         err->error          = ARGUEMENTS_ERROR;
         err->description    = "Not enough arguements";
+        handle_error(err);
     }
 
     bool flag = false;
     if(starts_with(argv[1], "-c") || starts_with(argv[1], "-create")) {
+        flag = true;
         printf("\nCreating task:\n");
         printf("Task title: ");
 
-        char* title = (char*)malloc(sizeof(char) * get_buffer_size(stdin));
-        if(!fgets(title, get_buffer_size(stdin), stdin)) {
+        char* title = get_string(stdin);
+        if(!title) {
             free(title);
             err->error       = PARAMETER_ERROR;
             err->description = "Problem getting title for new task";
-            return ;
+            handle_error(err);
         }
 
-        char* decsription = (char*)malloc(sizeof(char) * get_buffer_size(stdin));
-
-        printf("\nEnter start date('hh:mm:ss dd:mm:yyyy', blank for current time) :");
-        char start_date[20];
-
-        if(!fgets(start_date, 20, stdin)) {
+        char* description = get_string(stdin);
+        if(!description) {
             free(title);
+            free(description);
             err->error       = PARAMETER_ERROR;
-            err->description = "Problem getting start date for new task";
-            return ;
-        }
-     
-        printf("\nEnter due date('hh:mm:ss dd:mm:yyyy', blank for current time) :");
-        char due_date[20];
-
-        if(!fgets(due_date, 20, stdin)) {
-            free(title);
-            err->error       = PARAMETER_ERROR;
-            err->description = "Problem getting due date for new task";
-            return ;
+            err->description = "Problem getting description for task";
+            handle_error(err);
         }
 
+        struct tm start_date, end_date;
+        start_date  = get_date(stdin);
+        end_date    = get_date(stdin);
+
+        handle_error(err);
+        createTask(title, description, start_date, end_date, err);
 
     } else if(starts_with(argv[1], "-e") || starts_with(argv[1], "-edit")){
+        flag = true;
+        char* title = get_string(stdin);
+        struct error e;
 
+        printf("\nEnter new title(blank for unchanged):");
+        char* new_title       = get_string(stdin);
+        printf("\nEnter new description(blank for unchanged):");
+        char* new_description = get_string(stdin);
+        printf("\nEnter new start date(blank for unchanged):");
+        struct tm start = get_date(stdin);
+        printf("\nEnter new due date(blank for unchanged):"); 
+        struct tm end   = get_date(stdin);
+        Task old_task = getTask(title, &e);
+        if(e.error != NO_ERROR) {
+            fprintf(stderr, "\nError: %d:%s\n", e.error, e.description);
+            free(title);
+            free(new_title);
+            free(new_description);
+            handle_error(err);
+        }
+
+        Task t = (Task)malloc(sizeof(struct task));
+        if(!t) {
+            free(title);
+            free(new_title);
+            free(new_description);
+            handle_error(err);
+        }        
+
+        if(strcmp(new_title, "\n") == 0) {
+            t->title = title;
+        }
+        if(strcmp(new_description, "\n") == 0) {
+            t->description = old_task->description;
+        }
+        t->startDay = start;
+        t->dueDay    = end;
+        
+        editTask(
+            /* old title */ title,
+            /* new task object */t,
+            /* error object */&e 
+        ); 
+
+
+        free(title);
+        free(new_title);
+        free(new_description);
+        free(t);
+        free(old_task);
     } else if(starts_with(argv[1], "-d") || starts_with(argv[1], "-delete")){
-
+        flag = true;
+        char* title = get_string(stdin);
+        struct error e;
+        deleteTask(title, &e);
+        free(title);
+        handle_error(err);
+        
     } else if(starts_with(argv[1], "-l") || starts_with(argv[1], "-list")){
+        flag = true;
+        struct error e;
+        list l = getTasks(&e); 
+
+       handle_error(err); 
+
+        iterator i = l_iterator(l);
+
+        while(!l_iterator_at_end(i)) {
+            Task t = l_value(i);
+            printTask(t);
+            l_next(&i);
+        }
+        
+        l_delete(l, task_destructor);
 
     } else if(starts_with(argv[1], "-L") || starts_with(argv[1], "-listd")){
+        flag = true;
+        struct error e;
+        struct tm start = get_date(stdin);
+        struct tm end   = get_date(stdin);
+        list l          = getBetweenDate(start, end, &e);
+        handle_error(err);
+        
+        iterator i = l_iterator(l);
+        while(!l_iterator_at_end(i)) {
+            Task t = l_value(i);
+            printTask(t);
+            l_next(&i);
+        }
 
+        l_delete(l, task_destructor);
     } else if(starts_with(argv[1], "-t") || starts_with(argv[1], "-today")){
+        flag = true;
+        struct error e;
+        alarm(&e);
+        handle_error(err); 
 
+    }
+
+    if(!flag) {
+        fprintf(stdout, "\nUsage:\n %s -c or -create for creating\n\
+                                        \t\t\t-e or -edit to edit a task\n\
+                                        \t\t\t-d or -delete to delete a task\n\
+                                        \t\t\t-l or -list to list all tasks\n\
+                                        \t\t\t-L or -listd to list by date\n\
+                                        \t\t\t-t or -today to list all tasks that start/end today", argv[0]);
     } 
 
 }
-
-/*
- *    {.title="CREATE_TASK", .shortOption='c', .longOption="create"},
-    {.title="EDIT_TASK", .shortOption='e', .longOption="edit"},
-    {.title="DELETE_TASK", .shortOption='d', .longOption="delete"},
-    {.title="LIST_ALL_TASKS", .shortOption='l', .longOption="list"},
-    {.title="LIST_ALL_TASKS_BY_DATE", .shortOption='L', .longOption="listd"},
-    {.title="CHECK_TASKS_FOR_TODAY", .shortOption='t', .longOption="today"},
-}
- * */
-
 
