@@ -115,3 +115,8 @@ struct string string_mix(char* s1, char* s2) {
     
     return s;
 }
+
+void string_append3(struct string* s, char c) {
+    char txt[2] = {c,'\0'};
+    string_append(s, txt);
+}

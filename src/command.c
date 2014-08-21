@@ -90,7 +90,7 @@ void loop(void* (*callback)(void* , struct error*), void(*err_callback(struct er
 bool starts_with(char* source, char* pattern) {
     int i = 0;
 
-    if(strlen(source) < strlen(pattern)) {
+    if(strlen(source) != strlen(pattern)) {
         return false;
     }
 
@@ -109,39 +109,43 @@ static char* get_string(FILE* f) {
     }
 
     struct string s = string_new();
-    char buffer[1024];
+    char buffer[256];
     
-    while(fgets(buffer, 1024, f)) {
-        string_append(&s, buffer);    
+    while(fgets(buffer, 256, f)) {
+        int i = 0;
+        while(i < strlen(buffer)) { 
+            if(buffer[i] != '\n') {
+                string_append3(&s, buffer[i]);
+                ++ i;   
+            } else {
+                return string_char(s);
+            }
+        }
     }
 
     return string_char(s);
     
 }
 
-static struct tm get_date(FILE* in) {
-    struct tm time_;
+static void get_date(FILE* in, struct tm* t) {
+  
     if(!in) {
-        return time_;
+        return ;
     }
 
-    printf("\nEnter date(HH:MM:SS DD:MM:YYYY) or enter for current date: ");
-    struct string s = string_new();
-    char buffer[512];
+    fprintf(stdout, "\nEnter date(HH:MM:SS DD:MM:YYYY or enter for current date): ");
+    char buffer[21];
 
-    while(fgets(buffer, 512, in)) {
-        string_append(&s, buffer);
-    }
+    fgets(buffer, 21, in);
 
-    if(strcmp(string_char(s), "\n") == 0) {
-        time_t t;
-        time(&t);
-        time_ = *(struct tm*)localtime(&t);
+    if(buffer[0] == '\n') {
+        time_t t2;
+        time(&t2);
+        *t = *((struct tm*)localtime(&t2));
     } else {
-        strptime(string_char(s), "%H:%M:%S %d:%m:%Y",&time_);
+        strptime(buffer, "%H:%M:%S %d:%m:%Y", t);
     }
 
-    return time_;
 }
 
 static void handle_error(struct error* err) {
@@ -157,14 +161,21 @@ void parse_command(char** argv, int argc, struct error* err) {
     if(argc <2) {
         err->error          = ARGUEMENTS_ERROR;
         err->description    = "Not enough arguements";
+        fprintf(stdout, "\nUsage:\n %s -c or -create for creating\n\
+                                        -e or -edit to edit a task\n\
+                                        -d or -delete to delete a task\n\
+                                        -l or -list to list all tasks\n\
+                                        -L or -listd to list by date\n\
+                                        -t or -today to list all tasks that start/end today\n", argv[0]); 
+        fflush(stdout);
         handle_error(err);
     }
 
     bool flag = false;
-    if(starts_with(argv[1], "-c") || starts_with(argv[1], "-create")) {
+    if(starts_with(argv[1], "-create") || starts_with(argv[1], "-c")) {
         flag = true;
-        printf("\nCreating task:\n");
-        printf("Task title: ");
+        fprintf(stdout, "\nCreating task:\n");
+        fprintf(stdout, "Task title: ");
 
         char* title = get_string(stdin);
         if(!title) {
@@ -174,6 +185,7 @@ void parse_command(char** argv, int argc, struct error* err) {
             handle_error(err);
         }
 
+        fprintf(stdout, "Description: ");
         char* description = get_string(stdin);
         if(!description) {
             free(title);
@@ -184,25 +196,28 @@ void parse_command(char** argv, int argc, struct error* err) {
         }
 
         struct tm start_date, end_date;
-        start_date  = get_date(stdin);
-        end_date    = get_date(stdin);
+       
+        fprintf(stdout, "Start date: ");
+        get_date(stdin, &start_date);
+        fprintf(stdout, "End date: ");
+        get_date(stdin, &end_date);
 
         handle_error(err);
         createTask(title, description, start_date, end_date, err);
-
-    } else if(starts_with(argv[1], "-e") || starts_with(argv[1], "-edit")){
+    } else if(starts_with(argv[1], "-edit") || starts_with(argv[1], "-e") ){
         flag = true;
         char* title = get_string(stdin);
         struct error e;
+        struct tm start, end;
 
         printf("\nEnter new title(blank for unchanged):");
         char* new_title       = get_string(stdin);
         printf("\nEnter new description(blank for unchanged):");
         char* new_description = get_string(stdin);
         printf("\nEnter new start date(blank for unchanged):");
-        struct tm start = get_date(stdin);
+        get_date(stdin, &start);
         printf("\nEnter new due date(blank for unchanged):"); 
-        struct tm end   = get_date(stdin);
+        get_date(stdin, &end);
         Task old_task = getTask(title, &e);
         if(e.error != NO_ERROR) {
             fprintf(stderr, "\nError: %d:%s\n", e.error, e.description);
@@ -227,7 +242,7 @@ void parse_command(char** argv, int argc, struct error* err) {
             t->description = old_task->description;
         }
         t->startDay = start;
-        t->dueDay    = end;
+        t->dueDay   = end;
         
         editTask(
             /* old title */ title,
@@ -241,15 +256,17 @@ void parse_command(char** argv, int argc, struct error* err) {
         free(new_description);
         free(t);
         free(old_task);
-    } else if(starts_with(argv[1], "-d") || starts_with(argv[1], "-delete")){
+    } else if(starts_with(argv[1], "-delete") || starts_with(argv[1], "-d")){
         flag = true;
+
+        fprintf(stdout, "Enter task title: ");
         char* title = get_string(stdin);
         struct error e;
         deleteTask(title, &e);
         free(title);
         handle_error(err);
         
-    } else if(starts_with(argv[1], "-l") || starts_with(argv[1], "-list")){
+    } else if(starts_with(argv[1], "-list") || starts_with(argv[1], "-l")){
         flag = true;
         struct error e;
         list l = getTasks(&e); 
@@ -266,11 +283,15 @@ void parse_command(char** argv, int argc, struct error* err) {
         
         l_delete(l, task_destructor);
 
-    } else if(starts_with(argv[1], "-L") || starts_with(argv[1], "-listd")){
+    } else if(starts_with(argv[1], "-listd") || starts_with(argv[1], "-L")){
         flag = true;
         struct error e;
-        struct tm start = get_date(stdin);
-        struct tm end   = get_date(stdin);
+        struct tm start;
+        fprintf(stdout, "\nEnter start date: ");
+        get_date(stdin, &start);
+        struct tm end;
+        fprintf(stdout, "\nEnter end date: ");
+        get_date(stdin, &end);
         list l          = getBetweenDate(start, end, &e);
         handle_error(err);
         
@@ -282,21 +303,20 @@ void parse_command(char** argv, int argc, struct error* err) {
         }
 
         l_delete(l, task_destructor);
-    } else if(starts_with(argv[1], "-t") || starts_with(argv[1], "-today")){
+    } else if(starts_with(argv[1], "-today") || starts_with(argv[1], "-t")){
         flag = true;
         struct error e;
         alarm(&e);
         handle_error(err); 
-
     }
 
     if(!flag) {
         fprintf(stdout, "\nUsage:\n %s -c or -create for creating\n\
-                                        \t\t\t-e or -edit to edit a task\n\
-                                        \t\t\t-d or -delete to delete a task\n\
-                                        \t\t\t-l or -list to list all tasks\n\
-                                        \t\t\t-L or -listd to list by date\n\
-                                        \t\t\t-t or -today to list all tasks that start/end today", argv[0]);
+                                        -e or -edit to edit a task\n\
+                                        -d or -delete to delete a task\n\
+                                        -l or -list to list all tasks\n\
+                                        -L or -listd to list by date\n\
+                                        -t or -today to list all tasks that start/end today\n", argv[0]);
     } 
 
 }

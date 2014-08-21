@@ -19,6 +19,7 @@ size_t          string_len(struct string s);
 
 void            string_append(struct string* s, char* c);
 void            string_append2(struct string* s1, struct string s2);
+void            string_append3(struct string* s, char c);
 
 char*           string_char(struct string s);
 

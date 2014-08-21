@@ -13,6 +13,22 @@
 
 static sqlite3* db = NULL;
 
+char* m_strdup(char* s1) {
+    if(!s1) {
+        return NULL;
+    } else {
+        char* s2 = (char*)malloc((strlen(s1) + 1) * sizeof(char));
+        if(!s2) {
+            return NULL;
+        } else {
+            strcpy(s2, s1);
+            return s2;
+        }
+    }
+}
+
+
+
 bool initializeConnection() {
     int rc;
     
@@ -67,9 +83,9 @@ void createTask(char* title, char* description, struct tm startDate, struct tm e
 
     sqlite3_bind_text(statement, 1, title, strlen(title), SQLITE_STATIC); 
     sqlite3_bind_text(statement, 2, description, strlen(description), SQLITE_STATIC);
-    char* st_date_str = asctime(&startDate);
+    char* st_date_str = m_strdup(asctime(&startDate));
     sqlite3_bind_text(statement, 3, st_date_str, strlen(st_date_str)-1, SQLITE_STATIC);
-    char* en_date_str = asctime(&endDate);
+    char* en_date_str = m_strdup(asctime(&endDate));
     sqlite3_bind_text(statement, 4, en_date_str, strlen(en_date_str)-1, SQLITE_STATIC);
     
     sqlite3_step(statement);
@@ -79,6 +95,9 @@ void createTask(char* title, char* description, struct tm startDate, struct tm e
         err->error = DATABASE_INSERT;
         err->description = sqlite3_errmsg(db); 
     }
+
+    free(st_date_str);
+    free(en_date_str);
 }
 
 void deleteTask(char* name, struct error* err) {
@@ -133,9 +152,9 @@ void editTask(char* title, Task newValue, struct error* err) {
 
     sqlite3_bind_text(statement, 1, newValue->title, strlen(newValue->title), SQLITE_STATIC); 
     sqlite3_bind_text(statement, 2, newValue->description, strlen(newValue->description), SQLITE_STATIC);
-    char* startDay_str  = asctime(&newValue->startDay);
+    char* startDay_str  = m_strdup(asctime(&newValue->startDay));
     sqlite3_bind_text(statement, 3, startDay_str, strlen(startDay_str)-1, SQLITE_STATIC);
-    char* dueDay_str    = asctime(&newValue->dueDay);
+    char* dueDay_str    = m_strdup(asctime(&newValue->dueDay));
     sqlite3_bind_text(statement, 4, dueDay_str, strlen(dueDay_str)-1, SQLITE_STATIC);
     sqlite3_bind_text(statement, 6, title, strlen(title), SQLITE_STATIC);
 
@@ -146,6 +165,9 @@ void editTask(char* title, Task newValue, struct error* err) {
         err->error      = DATABASE_UPDATE;
         err->description= sqlite3_errmsg(db);
     }
+
+    free(startDay_str);
+    free(dueDay_str);
 }
 
 

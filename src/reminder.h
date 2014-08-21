@@ -55,5 +55,7 @@ list getByEndDate(struct tm t, struct error* err);
 list getTasks(struct error* err);
 list getBetweenDate(struct tm start, struct tm end, struct error* err);
 
+char* m_strdup(char* s1);
+
 #endif // _REMINDER_H is defined
 
