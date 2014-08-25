@@ -132,6 +132,11 @@ void deleteTask(char* name, struct error* err) {
 
 void editTask(char* title, Task newValue, struct error* err) {
     err->error = NO_ERROR;
+    if(!newValue) {
+        err->error = PARAMETER_ERROR;
+        err->description = "Wrong parameters";
+        return ;
+    }
     
     if(!db) {
         if(!initializeConnection()) {
@@ -141,25 +146,26 @@ void editTask(char* title, Task newValue, struct error* err) {
 
     sqlite3_stmt* statement;
     const char* unused;
-    char* sql = "update tasks set title = ?, description = ?, start_date = ?, end_date = ?,\
+    char* sql = "update tasks set title = ?, description = ?, start_date = ?, end_date = ?\
                 where title = ? ";
+
     int rc = sqlite3_prepare(db, sql, -1, &statement, &unused);
     if(rc != SQLITE_OK) {
         err->error          = DATABASE_UPDATE;
         err->description    = sqlite3_errmsg(db);
         return ;
     }
-
     sqlite3_bind_text(statement, 1, newValue->title, strlen(newValue->title), SQLITE_STATIC); 
     sqlite3_bind_text(statement, 2, newValue->description, strlen(newValue->description), SQLITE_STATIC);
     char* startDay_str  = m_strdup(asctime(&newValue->startDay));
     sqlite3_bind_text(statement, 3, startDay_str, strlen(startDay_str)-1, SQLITE_STATIC);
     char* dueDay_str    = m_strdup(asctime(&newValue->dueDay));
     sqlite3_bind_text(statement, 4, dueDay_str, strlen(dueDay_str)-1, SQLITE_STATIC);
-    sqlite3_bind_text(statement, 6, title, strlen(title), SQLITE_STATIC);
+    sqlite3_bind_text(statement, 5, title, strlen(title), SQLITE_STATIC);
 
-    sqlite3_step(statement);
-    rc = sqlite3_finalize(statement);
+    rc = sqlite3_step(statement);
+    
+    sqlite3_finalize(statement);
 
     if(rc != SQLITE_OK) {
         err->error      = DATABASE_UPDATE;

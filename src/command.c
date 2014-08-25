@@ -127,23 +127,30 @@ static char* get_string(FILE* f) {
     
 }
 
-static void get_date(FILE* in, struct tm* t) {
+static int get_date(FILE* in, struct tm* t) {
   
     if(!in) {
-        return ;
+        return -1;
     }
 
     fprintf(stdout, "\nEnter date(HH:MM:SS DD:MM:YYYY or enter for current date): ");
+    
     char buffer[21];
-
     fgets(buffer, 21, in);
 
     if(buffer[0] == '\n') {
         time_t t2;
         time(&t2);
         *t = *((struct tm*)localtime(&t2));
+        return 1;
     } else {
-        strptime(buffer, "%H:%M:%S %d:%m:%Y", t);
+        char* s = strptime(buffer, "%H:%M:%S %d:%m:%Y", t);
+        if(!s) {
+            fprintf(stdout, "\nWrong date. Please try again(HH:MM:SS DD:MM:YY): ");
+            get_date(in, t);
+        }
+
+        return 2;
     }
 
 }
@@ -206,18 +213,20 @@ void parse_command(char** argv, int argc, struct error* err) {
         createTask(title, description, start_date, end_date, err);
     } else if(starts_with(argv[1], "-edit") || starts_with(argv[1], "-e") ){
         flag = true;
+        fprintf(stdout, "\nEnter task title: ");
         char* title = get_string(stdin);
         struct error e;
         struct tm start, end;
 
-        printf("\nEnter new title(blank for unchanged):");
+        fprintf(stdout, "\nEnter new title(blank for unchanged):");
         char* new_title       = get_string(stdin);
-        printf("\nEnter new description(blank for unchanged):");
+        fprintf(stdout, "\nEnter new description(blank for unchanged):");
         char* new_description = get_string(stdin);
-        printf("\nEnter new start date(blank for unchanged):");
-        get_date(stdin, &start);
-        printf("\nEnter new due date(blank for unchanged):"); 
-        get_date(stdin, &end);
+        fprintf(stdout, "\nEnter new start date(blank for unchanged):");
+        int s1 = get_date(stdin, &start);
+        fprintf(stdout, "\nEnter new due date(blank for unchanged):"); 
+        int s2 = get_date(stdin, &end);
+
         Task old_task = getTask(title, &e);
         if(e.error != NO_ERROR) {
             fprintf(stderr, "\nError: %d:%s\n", e.error, e.description);
@@ -232,29 +241,53 @@ void parse_command(char** argv, int argc, struct error* err) {
             free(title);
             free(new_title);
             free(new_description);
-            handle_error(err);
+            free(old_task->title);
+            free(old_task->description);
+            handle_error(err); 
         }        
 
-        if(strcmp(new_title, "\n") == 0) {
-            t->title = title;
+        if(strcmp(new_title, "") == 0) {
+            t->title = (char*)malloc(sizeof(char) * (strlen(title)+1));
+            strcpy(t->title, title);
+        } else {
+            t->title = (char*)malloc(sizeof(char) * (strlen(new_title)+1));
+            strcpy(t->title, new_title);
         }
-        if(strcmp(new_description, "\n") == 0) {
-            t->description = old_task->description;
+        
+        if(strcmp(new_description, "") == 0) {
+            t->description = (char*)malloc(sizeof(char) * (strlen(old_task->description) + 1));
+            strcpy(t->description, old_task->description);
+        } else {
+            t->description = (char*)malloc(sizeof(char) * (strlen(new_description) + 1));
+            strcpy(t->description, new_description);
         }
-        t->startDay = start;
-        t->dueDay   = end;
+       
+        if(s1 != 1) {
+            t->startDay = start;
+        } else {
+            t->startDay = old_task->startDay;
+        }
+
+        if(s2 != 1) {
+            t->dueDay = end;
+        } else {
+            t->dueDay   = old_task->dueDay;
+        }
         
         editTask(
-            /* old title */ title,
-            /* new task object */t,
-            /* error object */&e 
+              /* old title */ title,
+              /* new task object */t,
+              /* error object */&e 
         ); 
-
 
         free(title);
         free(new_title);
         free(new_description);
+        free(t->title);
+        free(t->description);
         free(t);
+        free(old_task->title);
+        free(old_task->description);
         free(old_task);
     } else if(starts_with(argv[1], "-delete") || starts_with(argv[1], "-d")){
         flag = true;
