@@ -162,24 +162,30 @@ static void handle_error(struct error* err) {
     }
 }
 
-void parse_command(char** argv, int argc, struct error* err) {
-    err->error = NO_ERROR;
-
-    if(argc <2) {
-        err->error          = ARGUEMENTS_ERROR;
-        err->description    = "Not enough arguements";
-        fprintf(stdout, "\nUsage:\n %s -c or -create for creating\n\
+static void usage(char** argv) {
+    fprintf(stdout, "\nUsage:\n %s [DB FILE LOCATION] OPTION\n\
+                                        where OPTION is one of:\n\
+                                        -c or -create for creating\n\
                                         -e or -edit to edit a task\n\
                                         -d or -delete to delete a task\n\
                                         -l or -list to list all tasks\n\
                                         -L or -listd to list by date\n\
                                         -t or -today to list all tasks that start/end today\n", argv[0]); 
         fflush(stdout);
+}
+
+void parse_command(char** argv, int argc, struct error* err) {
+    err->error = NO_ERROR;
+
+    if(argc < 3) {
+        err->error          = ARGUEMENTS_ERROR;
+        err->description    = "Not enough arguements";
+        usage(argv);
         handle_error(err);
     }
 
     bool flag = false;
-    if(starts_with(argv[1], "-create") || starts_with(argv[1], "-c")) {
+    if(starts_with(argv[2], "-create") || starts_with(argv[2], "-c")) {
         flag = true;
         fprintf(stdout, "\nCreating task:\n");
         fprintf(stdout, "Task title: ");
@@ -211,7 +217,7 @@ void parse_command(char** argv, int argc, struct error* err) {
 
         handle_error(err);
         createTask(title, description, start_date, end_date, err);
-    } else if(starts_with(argv[1], "-edit") || starts_with(argv[1], "-e") ){
+    } else if(starts_with(argv[2], "-edit") || starts_with(argv[2], "-e") ){
         flag = true;
         fprintf(stdout, "\nEnter task title: ");
         char* title = get_string(stdin);
@@ -289,7 +295,7 @@ void parse_command(char** argv, int argc, struct error* err) {
         free(old_task->title);
         free(old_task->description);
         free(old_task);
-    } else if(starts_with(argv[1], "-delete") || starts_with(argv[1], "-d")){
+    } else if(starts_with(argv[2], "-delete") || starts_with(argv[2], "-d")){
         flag = true;
 
         fprintf(stdout, "Enter task title: ");
@@ -299,7 +305,7 @@ void parse_command(char** argv, int argc, struct error* err) {
         free(title);
         handle_error(err);
         
-    } else if(starts_with(argv[1], "-list") || starts_with(argv[1], "-l")){
+    } else if(starts_with(argv[2], "-list") || starts_with(argv[2], "-l")){
         flag = true;
         struct error e;
         list l = getTasks(&e); 
@@ -316,7 +322,7 @@ void parse_command(char** argv, int argc, struct error* err) {
         
         l_delete(l, task_destructor);
 
-    } else if(starts_with(argv[1], "-listd") || starts_with(argv[1], "-L")){
+    } else if(starts_with(argv[2], "-listd") || starts_with(argv[2], "-L")){
         flag = true;
         struct error e;
         struct tm start;
@@ -336,7 +342,7 @@ void parse_command(char** argv, int argc, struct error* err) {
         }
 
         l_delete(l, task_destructor);
-    } else if(starts_with(argv[1], "-today") || starts_with(argv[1], "-t")){
+    } else if(starts_with(argv[2], "-today") || starts_with(argv[2], "-t")){
         flag = true;
         struct error e;
         alarm(&e);
@@ -344,13 +350,9 @@ void parse_command(char** argv, int argc, struct error* err) {
     }
 
     if(!flag) {
-        fprintf(stdout, "\nUsage:\n %s -c or -create for creating\n\
-                                        -e or -edit to edit a task\n\
-                                        -d or -delete to delete a task\n\
-                                        -l or -list to list all tasks\n\
-                                        -L or -listd to list by date\n\
-                                        -t or -today to list all tasks that start/end today\n", argv[0]);
+        usage(argv);    
     } 
+
 
 }
 

@@ -57,5 +57,6 @@ list getBetweenDate(struct tm start, struct tm end, struct error* err);
 
 char* m_strdup(char* s1);
 
-#endif // _REMINDER_H is defined
+bool initializeConnection(char* loc);
 
+#endif // _REMINDER_H is defined

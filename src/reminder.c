@@ -29,10 +29,11 @@ char* m_strdup(char* s1) {
 
 
 
-bool initializeConnection() {
+bool initializeConnection(char* loc) {
     int rc;
+    if(!loc) loc = "tasks.db";
     
-    rc = sqlite3_open("tasks.db", &db);
+    rc = sqlite3_open(loc, &db);
 
     if(rc){
         fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
@@ -59,7 +60,7 @@ void createTask(char* title, char* description, struct tm startDate, struct tm e
     *   Always check for errors
     **/
     if(!db) {
-        if(!initializeConnection()) {
+        if(!initializeConnection(NULL)) {
             exit(1);
         }
     }
@@ -104,7 +105,7 @@ void deleteTask(char* name, struct error* err) {
     err->error = NO_ERROR;
     
     if(!db) {
-        if(!initializeConnection()) {
+        if(!initializeConnection(NULL)) {
             exit(1);
         }
     }
@@ -139,7 +140,7 @@ void editTask(char* title, Task newValue, struct error* err) {
     }
     
     if(!db) {
-        if(!initializeConnection()) {
+        if(!initializeConnection(NULL)) {
             exit(1);
         }
     }
@@ -182,7 +183,7 @@ Task getTask(char* title, struct error* err) {
     sqlite3_stmt* statement;
 
     if(!db) {
-        if(!initializeConnection()) {
+        if(!initializeConnection(NULL)) {
             exit(1);
         }
     }
@@ -441,7 +442,7 @@ list getTasks(struct error* err) {
     err->error = NO_ERROR;
 
     if(!db) {
-        if(!initializeConnection()) {
+        if(!initializeConnection(NULL)) {
             exit(1);
         }
     }
@@ -551,7 +552,7 @@ list getBetweenDate(struct tm start, struct tm end, struct error* err) {
     err->error = NO_ERROR;
 
     if(!db) {
-        if(!initializeConnection()) {
+        if(!initializeConnection(NULL)) {
             exit(1);
         }
     }
