@@ -127,6 +127,37 @@ static char* get_string(FILE* f) {
     
 }
 
+static bool match_date(char* s) {
+    if(!s) {
+        return false;
+    }
+
+    int i = 0;
+    bool foundNumber = false;
+    if(strlen(s) < 13) {
+        return false;
+    }
+
+    while(i < strlen(s)) {
+        if(!foundNumber && s[i] != ':') {
+            foundNumber = true;
+            if(s[i] == '0') {
+                fprintf(stderr, "\nError: Avoid using 0 as prefix");
+                fflush(stderr);
+                return false;
+            }
+        }
+
+        if(s[i] == ':') {
+            foundNumber = false;
+        }
+
+        ++ i;
+    }
+
+    return true;
+}
+
 static int get_date(FILE* in, struct tm* t) {
   
     if(!in) {
@@ -145,7 +176,7 @@ static int get_date(FILE* in, struct tm* t) {
         return 1;
     } else {
         char* s = strptime(buffer, "%H:%M:%S %d:%m:%Y", t);
-        if(!s) {
+        if(!s || !match_date(s)) {
             fprintf(stdout, "\nWrong date. Please try again(HH:MM:SS DD:MM:YY): ");
             get_date(in, t);
         }
@@ -165,12 +196,12 @@ static void handle_error(struct error* err) {
 static void usage(char** argv) {
     fprintf(stdout, "\nUsage:\n %s [DB FILE LOCATION] OPTION\n\
                                         where OPTION is one of:\n\
-                                        -c or -create for creating\n\
-                                        -e or -edit to edit a task\n\
-                                        -d or -delete to delete a task\n\
-                                        -l or -list to list all tasks\n\
-                                        -L or -listd to list by date\n\
-                                        -t or -today to list all tasks that start/end today\n", argv[0]); 
+                                        -c or --create for creating\n\
+                                        -e or --edit to edit a task\n\
+                                        -d or --delete to delete a task\n\
+                                        -l or --list to list all tasks\n\
+                                        -L or --listd to list by date\n\
+                                        -t or --today to list all tasks that start/end today\n", argv[0]); 
         fflush(stdout);
 }
 
@@ -185,7 +216,7 @@ void parse_command(char** argv, int argc, struct error* err) {
     }
 
     bool flag = false;
-    if(starts_with(argv[2], "-create") || starts_with(argv[2], "-c")) {
+    if(starts_with(argv[2], "--create") || starts_with(argv[2], "-c")) {
         flag = true;
         fprintf(stdout, "\nCreating task:\n");
         fprintf(stdout, "Task title: ");
@@ -217,7 +248,7 @@ void parse_command(char** argv, int argc, struct error* err) {
 
         handle_error(err);
         createTask(title, description, start_date, end_date, err);
-    } else if(starts_with(argv[2], "-edit") || starts_with(argv[2], "-e") ){
+    } else if(starts_with(argv[2], "--edit") || starts_with(argv[2], "-e") ){
         flag = true;
         fprintf(stdout, "\nEnter task title: ");
         char* title = get_string(stdin);
@@ -295,7 +326,7 @@ void parse_command(char** argv, int argc, struct error* err) {
         free(old_task->title);
         free(old_task->description);
         free(old_task);
-    } else if(starts_with(argv[2], "-delete") || starts_with(argv[2], "-d")){
+    } else if(starts_with(argv[2], "--delete") || starts_with(argv[2], "-d")){
         flag = true;
 
         fprintf(stdout, "Enter task title: ");
@@ -305,7 +336,7 @@ void parse_command(char** argv, int argc, struct error* err) {
         free(title);
         handle_error(err);
         
-    } else if(starts_with(argv[2], "-list") || starts_with(argv[2], "-l")){
+    } else if(starts_with(argv[2], "--list") || starts_with(argv[2], "-l")){
         flag = true;
         struct error e;
         list l = getTasks(&e); 
@@ -322,7 +353,7 @@ void parse_command(char** argv, int argc, struct error* err) {
         
         l_delete(l, task_destructor);
 
-    } else if(starts_with(argv[2], "-listd") || starts_with(argv[2], "-L")){
+    } else if(starts_with(argv[2], "--listd") || starts_with(argv[2], "-L")){
         flag = true;
         struct error e;
         struct tm start;
@@ -342,7 +373,7 @@ void parse_command(char** argv, int argc, struct error* err) {
         }
 
         l_delete(l, task_destructor);
-    } else if(starts_with(argv[2], "-today") || starts_with(argv[2], "-t")){
+    } else if(starts_with(argv[2], "--today") || starts_with(argv[2], "-t")){
         flag = true;
         struct error e;
         alarm(&e);
