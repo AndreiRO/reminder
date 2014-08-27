@@ -23,6 +23,7 @@ $ ./reminder [DB LOCAITON] OPTION
 
 USAGE
 ========
+```
 
 reminder [DB LOCATION] OPTION
 
@@ -33,5 +34,5 @@ OPTION:
 -l or --list to list all tasks<br>
 -L or --listd to list by date<br>
 -t or --today to list all tasks that start/end today<br>
-
+```
 
