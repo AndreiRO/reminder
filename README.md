@@ -28,11 +28,11 @@ USAGE
 reminder [DB LOCATION] OPTION
 
 OPTION:
--c or --create for creating<br>
--e or --edit to edit a task<br>
--d or --delete to delete a task<br>
--l or --list to list all tasks<br>
--L or --listd to list by date<br>
--t or --today to list all tasks that start/end today<br>
+-c or --create for creating
+-e or --edit to edit a task
+-d or --delete to delete a task
+-l or --list to list all tasks
+-L or --listd to list by date
+-t or --today to list all tasks that start/end today
 ```
 
