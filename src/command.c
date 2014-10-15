@@ -175,11 +175,11 @@ static int get_date(FILE* in, struct tm* t) {
         *t = *((struct tm*)localtime(&t2));
         return 1;
     } else {
-        char* s = strptime(buffer, "%H:%M:%S %d:%m:%Y", t);
-        if(!s || !match_date(s)) {
-            fprintf(stdout, "\nWrong date. Please try again(HH:MM:SS DD:MM:YY): ");
+        if(!match_date(buffer)) {
+            fprintf(stdout, "\nWrong date. Please try again(HH:MM:SS DD:MM:YYYY): ");
             get_date(in, t);
         }
+        strptime(buffer, "%H:%M:%S %d:%m:%Y", t);
 
         return 2;
     }
